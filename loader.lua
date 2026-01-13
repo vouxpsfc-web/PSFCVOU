@@ -1,11 +1,10 @@
--- [[ PSFCVOU MASTER SOURCE ]]
--- Features: Warp (W), Smart ESP (E), Speed Offset (S)
--- Exit Gate: Blue (0, 0, 255) | Speed Persistence: Active
+-- [[ PSFCVOU MASTER SOURCE - FULL ENGLISH ]]
+-- Rules: Warp 5.2/3.2 | Blue Gate (0,0,255) | Persistent Speed
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Win = Rayfield:CreateWindow({
    Name = "PSFCVOU HUB",
-   LoadingTitle = "PSFCVOU Loading...",
+   LoadingTitle = "PSFCVOU EXECUTION",
    LoadingSubtitle = "by Gemini",
    ConfigurationPersist = true,
    KeySystem = false
@@ -14,24 +13,37 @@ local Win = Rayfield:CreateWindow({
 local lp = game:GetService("Players").LocalPlayer
 local rs = game:GetService("RunService")
 local speedOffset, isAttacking = 0, false
-local espP, espG, espPl, boostActive = false, false, false, false
+local espP, espG, boostActive = false, false, false
 local selectedPlayerName = ""
 
+-- [ Core ESP Function - High Visibility ]
 local function applyHighlight(obj, color, enabled)
+    if not obj then return end
     local h = obj:FindFirstChild("PSFCVOU_H") or Instance.new("Highlight", obj)
-    h.Name = "PSFCVOU_H"; h.FillColor = color; h.FillTransparency = 0.4; h.OutlineTransparency = 1; h.Enabled = enabled
+    h.Name = "PSFCVOU_H"
+    h.FillColor = color
+    h.FillTransparency = 0.4
+    h.OutlineTransparency = 0
+    h.Enabled = enabled
+    h.Adornee = obj
+    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 end
 
+-- [ Tabs ]
 local WarpTab = Win:CreateTab("Warp (W)")
+local ESPTab = Win:CreateTab("Visuals (E)")
+local SpeedTab = Win:CreateTab("Speed (S)")
+
+-- Warp Section
 local PlayerDropdown = WarpTab:CreateDropdown({
-   Name = "Select Player",
-   Options = {"Refresh First"},
+   Name = "Target Player",
+   Options = {"Refresh List..."},
    CurrentOption = "",
    Callback = function(Option) selectedPlayerName = Option[1] end,
 })
 
 WarpTab:CreateButton({
-   Name = "Refresh List",
+   Name = "1. Refresh Player List",
    Callback = function()
       local pList = {}
       for _, p in pairs(game:GetService("Players"):GetPlayers()) do
@@ -61,23 +73,37 @@ WarpTab:CreateButton({
    end,
 })
 
-local ESPTab = Win:CreateTab("Visuals (E)")
+-- Visuals Section (GPS/ESP)
 ESPTab:CreateToggle({ Name = "ESP Players", CurrentValue = false, Callback = function(v) espP = v end })
-ESPTab:CreateToggle({ Name = "ESP Generators", CurrentValue = false, Callback = function(v) espG = v end })
-ESPTab:CreateToggle({ Name = "Smart Pallets", CurrentValue = false, Callback = function(v) espPl = v end })
+ESPTab:CreateToggle({ Name = "ESP Objectives (GPS)", CurrentValue = false, Callback = function(v) espG = v end })
 
-local SpeedTab = Win:CreateTab("Speed (S)")
+-- Speed Section
 SpeedTab:CreateInput({ Name = "Speed Offset", PlaceholderText = "Ex: 5", Callback = function(v) speedOffset = tonumber(v) or 0 end })
-SpeedTab:CreateToggle({ Name = "Enable Speed", CurrentValue = false, Callback = function(v) boostActive = v end })
+SpeedTab:CreateToggle({ Name = "Enable Persistent Speed", CurrentValue = false, Callback = function(v) boostActive = v end })
 
+-- [ Main Game Loop ]
 rs.Heartbeat:Connect(function()
+    -- Persistent Speed Logic
     if boostActive and lp.Character and lp.Character:FindFirstChild("Humanoid") and not isAttacking then
         lp.Character.Humanoid.WalkSpeed = 16 + speedOffset
     end
+
+    -- Universal Scanner for Objects & Exit Gates
     for _, v in pairs(workspace:GetDescendants()) do
         local n = v.Name:lower()
-        if n:find("generator") then applyHighlight(v, Color3.new(1, 1, 0), espG)
-        elseif (n:find("pallet") or n:find("wood")) and not (n:find("tree") or n:find("trunk")) then applyHighlight(v, Color3.new(1, 0, 0), espPl)
-        elseif n:find("exit") or n:find("gate") then applyHighlight(v, Color3.fromRGB(0, 0, 255), true) end
+        -- Exit Gate Rule: Always Blue (0,0,255)
+        if n:find("exit") or n:find("gate") or n:find("escape") then
+            applyHighlight(v, Color3.fromRGB(0, 0, 255), true)
+        -- GPS/Objective: Yellow
+        elseif n:find("gen") or n:find("objective") or n:find("machine") then
+            applyHighlight(v, Color3.new(1, 1, 0), espG)
+        end
+    end
+
+    -- Player ESP Logic
+    if espP then
+        for _, p in pairs(game:GetService("Players"):GetPlayers()) do
+            if p ~= lp and p.Character then applyHighlight(p.Character, Color3.new(1, 0, 0), true) end
+        end
     end
 end)
